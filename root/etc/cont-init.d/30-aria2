@@ -1,0 +1,17 @@
+#!/usr/bin/with-contenv bash
+mkdir -p /config/ssl /config/logs /downloads
+
+if [ ! -f /config/aria2.conf ]; then
+  cp /aria2/conf/aria2.conf.default /config/aria2.conf
+fi
+
+touch /config/aria2.session
+touch /config/dht.dat
+
+BTPORT=${BTPORT:-32516}
+CACHE=${CACHE:-128M}
+
+sed -i "s@^\(listen-port=\).*@\1${BTPORT}@" /config/aria2.conf
+sed -i "s@^\(dht-listen-port=\).*@\1${BTPORT}@" /config/aria2.conf
+
+chown -R abc:abc /config /downloads

@@ -1,0 +1,17 @@
+#!/usr/bin/with-contenv bash
+PORT=${PORT:-8080}
+USERNAME=${USERNAME:-""}
+PASSWORD=${PASSWORD:-""}
+
+AUTH_FILE="/etc/nginx/.htpasswd"
+if [ -n "$USERNAME" ] && [ -n "$PASSWORD" ]; then
+  mkdir -p /etc/nginx
+  htpasswd -bc "$AUTH_FILE" "$USERNAME" "$PASSWORD"
+  AUTH_BASIC_CONFIG="auth_basic \"Aria2 Console\"; auth_basic_user_file /etc/nginx/.htpasswd;"
+else
+  rm -f "$AUTH_FILE"
+  AUTH_BASIC_CONFIG="auth_basic off;"
+fi
+
+export PORT AUTH_BASIC_CONFIG
+envsubst '${PORT} ${AUTH_BASIC_CONFIG}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf

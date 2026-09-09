@@ -1,0 +1,13 @@
+#!/usr/bin/with-contenv bash
+UT=${UT:-true}
+RUT=${RUT:-true}
+
+if [ "$UT" = "true" ]; then
+  /bin/bash /aria2/script/tracker.sh /config/aria2.conf || true
+fi
+
+if [ "$RUT" = "true" ]; then
+  mkdir -p /etc/crontabs
+  cp /aria2/conf/rpc-tracker /etc/crontabs/root
+  /usr/sbin/crond
+fi

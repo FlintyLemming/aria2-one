@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bash
+exec s6-setuidgid abc /usr/local/bin/aria2c \
+    --conf-path=/config/aria2.conf \
+    --disk-cache=${CACHE:-128M}

@@ -1,0 +1,54 @@
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 0;
+
+    access_log /dev/stdout;
+    error_log /dev/stderr warn;
+
+    server {
+        listen ${PORT} default_server;
+        listen [::]:${PORT} default_server;
+        server_name _;
+
+        ${AUTH_BASIC_CONFIG}
+
+        location / {
+            root /www;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /download/ {
+            alias /downloads/;
+            sendfile on;
+            sendfile_max_chunk 1m;
+            tcp_nopush on;
+            tcp_nodelay on;
+            autoindex off;
+            add_header Accept-Ranges bytes;
+        }
+
+        location /jsonrpc {
+            proxy_pass http://127.0.0.1:8081/jsonrpc;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_read_timeout 86400s;
+        }
+    }
+}

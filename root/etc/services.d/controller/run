@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+exec s6-setuidgid abc /app/aria2-controller \
+    -port=8081 \
+    -aria2-url=http://127.0.0.1:6800/jsonrpc \
+    -download-dir=/downloads
