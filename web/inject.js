@@ -119,9 +119,9 @@
           // 修改 views/list.html 模板：已完成任务添加直链下载按钮
           const listHtml = $templateCache.get('views/list.html');
           if (listHtml) {
-            const target = 'ng-if="isTaskRetryable(task)"';
+            const target = '<a ng-if="isTaskRetryable(task)"';
             const downloadBtnHtml =
-              '<a class="btn-direct-download" ng-if="task.status === \'complete\' && task.files && task.files.length === 1" ng-href="{{getDirectDownloadUrl(task.files[0].path)}}" download="{{task.taskName}}" ng-click="$event.stopPropagation()">⬇️ 下载到本地</a>' +
+              '<a class="btn-direct-download" ng-if="task.status === \'complete\' && task.files && task.files.length === 1" ng-href="{{getDirectDownloadUrl(task.files[0].path)}}" download="{{task.taskName}}" ng-click="$event.stopPropagation()">⬇️ 下载到本地</a> ' +
               '<a class="btn-direct-download" ng-if="task.status === \'complete\' && task.files && task.files.length > 1" ng-href="#!/task/detail/{{task.gid}}" ng-click="$event.stopPropagation()">📁 查看文件列表</a> ';
             $templateCache.put('views/list.html', listHtml.replace(target, downloadBtnHtml + target));
           }
