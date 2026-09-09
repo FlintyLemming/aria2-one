@@ -7,11 +7,11 @@ services:
     container_name: 7815-aria2
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "7815:7815"
       - "32516:32516"
       - "32516:32516/udp"
     environment:
-      - PORT=8080
+      - PORT=7815
       - BTPORT=32516
       - USERNAME=admin
       - PASSWORD=admin888
