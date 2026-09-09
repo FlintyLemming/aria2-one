@@ -1,0 +1,48 @@
+/* 隐藏顶部导航栏 RPC 切换下拉 */
+.rpcselect-dropdown,
+.navbar-nav .dropdown.rpcselect-dropdown,
+li:has(> .rpcselect-dropdown) {
+  display: none !important;
+}
+
+/* 隐藏 AriaNg 设置中的 RPC 标签页 */
+.nav-tab-title-rpcname {
+  display: none !important;
+}
+
+/* 隐藏左侧 Aria2 设置中的 RPC 菜单项 */
+a[href*="#!/settings/aria2/rpc"],
+li[data-href-match*="/settings/aria2/rpc"] {
+  display: none !important;
+}
+
+/* 直链下载与预览按钮样式 */
+.btn-direct-download {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  color: #fff !important;
+  background-color: #3c8dbc;
+  border-color: #367fa9;
+  text-decoration: none !important;
+  display: inline-block;
+}
+.btn-direct-download:hover {
+  background-color: #367fa9;
+}
+
+.btn-direct-preview {
+  margin-left: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  color: #fff !important;
+  background-color: #00a65a;
+  border-color: #008d4c;
+  text-decoration: none !important;
+  display: inline-block;
+}
+.btn-direct-preview:hover {
+  background-color: #008d4c;
+}
