@@ -1,0 +1,26 @@
+services:
+  aria2:
+    image: flintylemming/7815-aria2:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 7815-aria2
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "32516:32516"
+      - "32516:32516/udp"
+    environment:
+      - PORT=8080
+      - BTPORT=32516
+      - USERNAME=admin
+      - PASSWORD=admin888
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+      - CACHE=128M
+      - UT=true
+      - RUT=true
+    volumes:
+      - ./config:/config
+      - ./downloads:/downloads
