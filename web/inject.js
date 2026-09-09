@@ -5,13 +5,51 @@
   function autoConfigureRPC() {
     const host = window.location.hostname;
     const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
 
-    let options = {};
+    const defaultOptions = {
+      language: (navigator.language && navigator.language.startsWith('zh') ? 'zh_Hans' : 'en'),
+      theme: 'light',
+      title: '${downspeed}, ${upspeed} - ${title}',
+      titleRefreshInterval: 5000,
+      browserNotification: false,
+      browserNotificationSound: true,
+      browserNotificationFrequency: 'unlimited',
+      rpcAlias: '',
+      rpcHost: host,
+      rpcPort: port,
+      rpcInterface: 'jsonrpc',
+      protocol: protocol,
+      httpMethod: 'POST',
+      rpcRequestHeaders: '',
+      secret: '',
+      extendRpcServers: [],
+      webSocketReconnectInterval: 5000,
+      globalStatRefreshInterval: 1000,
+      downloadTaskRefreshInterval: 1000,
+      keyboardShortcuts: true,
+      swipeGesture: true,
+      dragAndDropTasks: true,
+      rpcListDisplayOrder: 'recentlyUsed',
+      afterCreatingNewTask: 'task-list',
+      removeOldTaskAfterRetrying: false,
+      confirmTaskRemoval: true,
+      includePrefixWhenCopyingFromTaskDetails: true,
+      showPiecesInfoInTaskDetailPage: 'le10240',
+      afterRetryingTask: 'task-list-downloading',
+      taskListIndependentDisplayOrder: false,
+      displayOrder: 'default:asc',
+      waitingTaskListPageDisplayOrder: 'default:asc',
+      stoppedTaskListPageDisplayOrder: 'default:asc',
+      fileListDisplayOrder: 'default:asc',
+      peerListDisplayOrder: 'default:asc'
+    };
+
+    let options = Object.assign({}, defaultOptions);
     try {
       const raw = localStorage.getItem('AriaNg.Options');
       if (raw) {
-        options = JSON.parse(raw);
+        options = Object.assign(options, JSON.parse(raw));
       }
     } catch (e) {}
 

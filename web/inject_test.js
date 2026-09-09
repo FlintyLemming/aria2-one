@@ -17,12 +17,24 @@ test('autoConnectConfig updates localStorage correctly', () => {
   function updateOptions(loc, storage) {
     const host = loc.hostname;
     const port = loc.port || (loc.protocol === 'https:' ? '443' : '80');
-    const protocol = loc.protocol === 'https:' ? 'wss' : 'ws';
+    const protocol = loc.protocol === 'https:' ? 'https' : 'http';
 
-    let options = {};
+    const defaultOptions = {
+      language: 'zh_Hans',
+      theme: 'light',
+      rpcHost: host,
+      rpcPort: port,
+      protocol: protocol,
+      rpcInterface: 'jsonrpc',
+      httpMethod: 'POST',
+      secret: '',
+      extendRpcServers: []
+    };
+
+    let options = Object.assign({}, defaultOptions);
     try {
       const raw = storage.getItem('AriaNg.Options');
-      if (raw) options = JSON.parse(raw);
+      if (raw) options = Object.assign(options, JSON.parse(raw));
     } catch (e) {}
 
     options.rpcHost = host;
@@ -41,9 +53,11 @@ test('autoConnectConfig updates localStorage correctly', () => {
 
   assert.strictEqual(result.rpcHost, '192.168.1.100');
   assert.strictEqual(result.rpcPort, '8080');
-  assert.strictEqual(result.protocol, 'ws');
+  assert.strictEqual(result.protocol, 'http');
   assert.strictEqual(result.rpcInterface, 'jsonrpc');
   assert.strictEqual(result.secret, '');
+  assert.strictEqual(result.language, 'zh_Hans');
+  assert.strictEqual(result.theme, 'light');
 });
 
 test('media file detector recognizes extensions correctly', () => {
