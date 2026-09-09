@@ -9,6 +9,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type RPCRequest struct {
@@ -36,6 +39,12 @@ type ControllerProxy struct {
 	downloadDir  string
 	reverseProxy *httputil.ReverseProxy
 	httpClient   *http.Client
+}
+
+var wsUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 func NewControllerProxy(upstreamURLStr, downloadDir string) *ControllerProxy {
@@ -116,7 +125,90 @@ func extractGidAndToken(rawParams json.RawMessage) (string, string) {
 	return firstStr, ""
 }
 
+func (p *ControllerProxy) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	clientConn, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[ws] upgrade error: %v", err)
+		return
+	}
+	defer clientConn.Close()
+
+	// 转换 upstream URL 协议至 ws/wss
+	u := *p.upstreamURL
+	if u.Scheme == "https" {
+		u.Scheme = "wss"
+	} else {
+		u.Scheme = "ws"
+	}
+
+	upstreamConn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Printf("[ws] failed to connect to upstream %s: %v", u.String(), err)
+		return
+	}
+	defer upstreamConn.Close()
+
+	errChan := make(chan error, 2)
+
+	// upstream -> client 转发
+	go func() {
+		for {
+			msgType, data, err := upstreamConn.ReadMessage()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			if err := clientConn.WriteMessage(msgType, data); err != nil {
+				errChan <- err
+				return
+			}
+		}
+	}()
+
+	// client -> upstream 拦截并转发
+	go func() {
+		for {
+			msgType, data, err := clientConn.ReadMessage()
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			if msgType == websocket.TextMessage {
+				var req RPCRequest
+				if err := json.Unmarshal(data, &req); err == nil {
+					if req.Method == "aria2.remove" || req.Method == "aria2.removeDownloadResult" {
+						gid, token := extractGidAndToken(req.Params)
+						if gid != "" {
+							go func(g, tok string) {
+								paths, err := p.PreQueryFiles(g, tok)
+								if err == nil && len(paths) > 0 {
+									// 等待 aria2 注销并释放句柄后删除
+									time.Sleep(100 * time.Millisecond)
+									RemoveTaskFiles(p.downloadDir, paths)
+								}
+							}(gid, token)
+						}
+					}
+				}
+			}
+
+			if err := upstreamConn.WriteMessage(msgType, data); err != nil {
+				errChan <- err
+				return
+			}
+		}
+	}()
+
+	<-errChan
+}
+
 func (p *ControllerProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if websocket.IsWebSocketUpgrade(r) {
+		p.handleWebSocket(w, r)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		p.reverseProxy.ServeHTTP(w, r)
 		return
