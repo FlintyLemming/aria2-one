@@ -53,6 +53,14 @@ func NewControllerProxy(upstreamURLStr, downloadDir string) *ControllerProxy {
 		log.Fatalf("invalid upstream url %s: %v", upstreamURLStr, err)
 	}
 	rp := httputil.NewSingleHostReverseProxy(u)
+	originalDirector := rp.Director
+	rp.Director = func(req *http.Request) {
+		originalDirector(req)
+		if u.Path != "" && u.Path != "/" {
+			req.URL.Path = u.Path
+		}
+		req.Host = u.Host
+	}
 
 	return &ControllerProxy{
 		upstreamURL:  u,

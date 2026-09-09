@@ -1,3 +1,4 @@
+user abc abc;
 worker_processes auto;
 pid /run/nginx.pid;
 include /etc/nginx/modules-enabled/*.conf;
@@ -39,7 +40,6 @@ http {
             tcp_nopush on;
             tcp_nodelay on;
             autoindex off;
-            add_header Accept-Ranges bytes;
         }
 
         location /jsonrpc {

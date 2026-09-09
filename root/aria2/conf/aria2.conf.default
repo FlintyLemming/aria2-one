@@ -4,6 +4,7 @@ enable-rpc=true
 rpc-allow-origin-all=true
 rpc-listen-all=true
 rpc-listen-port=6800
+disable-ipv6=true
 file-allocation=falloc
 continue=true
 remote-time=true

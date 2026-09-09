@@ -10,5 +10,6 @@ else
   usermod -u "$PUID" -g "$PGID" abc
 fi
 
-mkdir -p /config /downloads /run/nginx
-chown -R abc:abc /config /downloads
+mkdir -p /config /downloads /run/nginx /var/lib/nginx/tmp
+chown -R abc:abc /config /downloads /run/nginx /var/lib/nginx
+chmod 755 /downloads /config
