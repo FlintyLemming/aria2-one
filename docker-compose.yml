@@ -1,17 +1,17 @@
 services:
   aria2:
-    image: flintylemming/7815-aria2:latest
+    image: flintylemming/aria2-one:latest
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: 7815-aria2
+    container_name: aria2-one
     restart: unless-stopped
     ports:
-      - "7815:7815"
+      - "8080:8080"
       - "32516:32516"
       - "32516:32516/udp"
     environment:
-      - PORT=7815
+      - PORT=8080
       - BTPORT=32516
       - USERNAME=admin
       - PASSWORD=admin888

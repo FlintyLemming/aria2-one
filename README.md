@@ -1,6 +1,8 @@
-# 7815-aria2: 单端口 Aria2 控制台服务
+# aria2-one: 单端口 Aria2 控制台服务
 
 真正的单端口纯粹下载控制台容器镜像。仅暴露唯一的 Web 端口（默认 8080），内置前置 Basic Auth 统一鉴权、同源自适应零配置连接、直链本地下载与流媒体在线预览，并通过内部 Go 中间件实现删除任务时自动彻底清理磁盘关联文件。
+
+![AriaNg Direct Download](screenshots/05-task-completed-with-direct-link.png)
 
 ## 核心特性
 
@@ -18,8 +20,8 @@
 ```yaml
 services:
   aria2:
-    image: flintylemming/7815-aria2:latest
-    container_name: 7815-aria2
+    image: flintylemming/aria2-one:latest
+    container_name: aria2-one
     restart: unless-stopped
     ports:
       - "8080:8080"

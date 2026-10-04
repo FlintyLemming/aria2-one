@@ -22,7 +22,7 @@ docker run -d \
   -e PASSWORD=testpass \
   -v "$TEST_DL_DIR:/downloads" \
   -v "$TEST_CFG_DIR:/config" \
-  test-7815-aria2:local
+  test-aria2-one:local
 
 echo "[e2e] waiting for services to initialize..."
 STARTED=false
