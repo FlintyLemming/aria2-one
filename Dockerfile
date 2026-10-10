@@ -10,16 +10,39 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o aria2-controller .
 FROM alpine:3.20 AS web-builder
 RUN apk add --no-cache curl wget unzip bash tar
 WORKDIR /tmp
-RUN ARIANG_VER=$(wget -qO- https://api.github.com/repos/mayswind/AriaNg/releases/latest | grep 'tag_name' | cut -d\" -f4) \
-    && wget -O AriaNg.zip https://github.com/mayswind/AriaNg/releases/download/${ARIANG_VER}/AriaNg-${ARIANG_VER}-AllInOne.zip \
-    && unzip AriaNg.zip -d /www \
-    && curl -fsSL https://raw.githubusercontent.com/SuperNG6/docker-aria2/master/install.sh | bash
+
+# AriaNg 版本从 releases/latest 的跳转地址解析，不调用（未认证时容易被限流的）GitHub API
+RUN LATEST_URL=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/mayswind/AriaNg/releases/latest) \
+    && ARIANG_VER=${LATEST_URL##*/} \
+    && [ -n "${ARIANG_VER}" ] && [ "${ARIANG_VER}" != "latest" ] \
+    && echo "AriaNg version: ${ARIANG_VER}" \
+    && curl -fsSL -o AriaNg.zip "https://github.com/mayswind/AriaNg/releases/download/${ARIANG_VER}/AriaNg-${ARIANG_VER}-AllInOne.zip" \
+    && unzip -q AriaNg.zip -d /www \
+    && test -f /www/index.html
+
+# static aria2c（与 SuperNG6/docker-aria2 上游 Dockerfile 相同，取自 Aria2-Pro-Core 的 Release）
+RUN MACHINE=$(uname -m) \
+    && case "${MACHINE}" in \
+         x86_64) ARCH=x86_64 ;; \
+         aarch64) ARCH=arm64 ;; \
+         armv7l|armv6l) ARCH=armhf ;; \
+         i386|i686) ARCH=i386 ;; \
+         *) echo "unsupported architecture: ${MACHINE}" >&2; exit 1 ;; \
+       esac \
+    && curl -fsSL -o /tmp/aria2.tar.gz "https://github.com/SuperNG6/Aria2-Pro-Core/releases/latest/download/aria2-static-linux-${ARCH}.tar.gz" \
+    && tar -xzf /tmp/aria2.tar.gz -C /usr/local/bin \
+    && test -x /usr/local/bin/aria2c \
+    && /usr/local/bin/aria2c -v > /tmp/aria2c-version \
+    && head -n 1 /tmp/aria2c-version \
+    && rm -f /tmp/aria2.tar.gz /tmp/aria2c-version
 
 COPY web/inject.css /www/inject.css
 COPY web/inject.js /www/inject.js
+COPY web/mirror.js /www/mirror.js
 
 # 在 index.html 中注入样式与脚本引用
-RUN sed -i 's@</head>@<link rel="stylesheet" href="inject.css"><script src="inject.js"></script></head>@' /www/index.html
+RUN sed -i 's@</head>@<link rel="stylesheet" href="inject.css"><script src="inject.js"></script><script src="mirror.js"></script></head>@' /www/index.html \
+    && grep -q '<script src="mirror.js"></script></head>' /www/index.html
 
 # 阶段 3: 最终运行镜像 (基于 superng6/alpine:3.22，包含 s6-overlay)
 FROM superng6/alpine:3.22
@@ -35,7 +58,8 @@ ENV PORT=8080 \
     TZ=Asia/Shanghai \
     CACHE=128M \
     UT=true \
-    RUT=true
+    RUT=true \
+    GITHUB_TOKEN=""
 
 # 安装 Nginx、apache2-utils (htpasswd)、gettext (envsubst)、bash、curl、jq 等
 RUN apk add --no-cache \

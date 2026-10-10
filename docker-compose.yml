@@ -21,6 +21,7 @@ services:
       - CACHE=128M
       - UT=true
       - RUT=true
+      # - GITHUB_TOKEN=
     volumes:
       - ./config:/config
       - ./downloads:/downloads

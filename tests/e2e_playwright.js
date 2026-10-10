@@ -139,6 +139,24 @@ async function runTest() {
     await page.screenshot({ path: shot6, fullPage: true });
     console.log('Screenshot saved:', shot6);
 
+    // 6. Open the GitHub Release mirror page
+    console.log('6. Navigating to Release mirror page (#!/mirrors)...');
+    await page.goto('http://127.0.0.1:7815/#!/mirrors', { waitUntil: 'load' });
+    await page.waitForSelector('.aria-one-mirror', { timeout: 10000 });
+
+    const mirrorNavSelector = 'a[href="#!/mirrors"]';
+    const mirrorNavLink = await page.$(mirrorNavSelector);
+    if (!mirrorNavLink) {
+      throw new Error(`Sidebar link ${mirrorNavSelector} not found`);
+    }
+    console.log('Found sidebar mirror link text:', (await mirrorNavLink.innerText()).trim());
+    await page.waitForTimeout(1500);
+
+    // Save screenshot 7: Release mirror page
+    const shot7 = path.join(SCREENSHOT_DIR, '07-mirrors-page.png');
+    await page.screenshot({ path: shot7, fullPage: true });
+    console.log('Screenshot saved:', shot7);
+
     console.log('--- ALL E2E PLAYWRIGHT TESTS PASSED SUCCESSFULLY! ---');
   } catch (err) {
     console.error('Test failed with error:', err);

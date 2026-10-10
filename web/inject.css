@@ -46,3 +46,291 @@ li[data-href-match*="/settings/aria2/rpc"] {
 .btn-direct-preview:hover {
   background-color: #008d4c;
 }
+
+/* ===== GitHub Release 镜像页面（mirror.js） ===== */
+.aria-one-mirror .mirror-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.aria-one-mirror .mirror-toolbar-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.aria-one-mirror .mirror-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  min-width: 0;
+}
+.aria-one-mirror .mirror-summary > span {
+  word-break: break-all;
+}
+.aria-one-mirror .mirror-alert {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  word-break: break-word;
+}
+.aria-one-mirror .mirror-alert .close {
+  margin-left: 8px;
+}
+.aria-one-mirror .mirror-alert ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+.aria-one-mirror .mirror-panel {
+  margin-bottom: 15px;
+}
+.aria-one-mirror .mirror-panel .box-body {
+  padding: 12px 15px;
+}
+.aria-one-mirror .help-block {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+.aria-one-mirror .mirror-import-help {
+  margin: 0 0 8px;
+}
+.aria-one-mirror .mirror-checks {
+  margin: 0 0 10px;
+}
+.aria-one-mirror .mirror-checks .checkbox-inline {
+  margin: 0 18px 6px 0;
+}
+.aria-one-mirror .mirror-inline-check {
+  margin: 6px 0 0;
+}
+.aria-one-mirror .mirror-form-actions {
+  margin-top: 10px;
+}
+.aria-one-mirror .mirror-form-actions .btn + .btn {
+  margin-left: 6px;
+}
+.aria-one-mirror .mirror-mono {
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+.aria-one-mirror .mirror-yaml {
+  font-size: 12px;
+  min-height: 160px;
+  resize: vertical;
+}
+.aria-one-mirror .mirror-break {
+  word-break: break-all;
+}
+.aria-one-mirror .mirror-empty {
+  text-align: center;
+  padding: 50px 15px;
+}
+.aria-one-mirror .mirror-empty .fa {
+  font-size: 48px;
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+.aria-one-mirror .mirror-loading {
+  padding: 20px 0;
+}
+.aria-one-mirror .mirror-list-box {
+  margin-bottom: 15px;
+}
+.aria-one-mirror .mirror-list-box > .table-responsive {
+  margin-bottom: 0;
+  border: 0;
+}
+.aria-one-mirror .mirror-table {
+  margin-bottom: 0;
+}
+.aria-one-mirror .mirror-table > thead > tr > th {
+  white-space: nowrap;
+  border-bottom: 1px solid #ddd;
+}
+.aria-one-mirror .mirror-table > tbody + tbody {
+  border-top: 1px solid #ddd;
+}
+.aria-one-mirror .mirror-table > tbody > tr.mirror-row > td {
+  vertical-align: middle;
+}
+.aria-one-mirror .mirror-table > tbody > tr.mirror-row:hover > td {
+  background-color: #f9f9f9;
+}
+.aria-one-mirror .mirror-disabled > tr.mirror-row > td:not(.mirror-actions) {
+  opacity: 0.6;
+}
+/* 列宽尽量小：长仓库名 / tag / 错误信息可任意换行，避免在侧边栏展开的 1024px 下撑出容器 */
+.aria-one-mirror .mirror-name-cell {
+  min-width: 110px;
+}
+.aria-one-mirror .mirror-name-cell > div {
+  max-width: 240px;
+}
+.aria-one-mirror .mirror-version-cell {
+  min-width: 90px;
+}
+.aria-one-mirror .mirror-version-tag {
+  max-width: 170px;
+}
+.aria-one-mirror .mirror-status-cell {
+  min-width: 110px;
+}
+/* 同时覆盖 Bootstrap 在 < 768px 时对 .table-responsive 单元格的 nowrap，避免长文本压到相邻列 */
+.aria-one-mirror .mirror-table > tbody > tr.mirror-row > td.mirror-name-cell,
+.aria-one-mirror .mirror-table > tbody > tr.mirror-row > td.mirror-version-cell,
+.aria-one-mirror .mirror-table > tbody > tr.mirror-row > td.mirror-status-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.aria-one-mirror .mirror-progress-cell,
+.aria-one-mirror .mirror-time-cell,
+.aria-one-mirror .mirror-nowrap {
+  white-space: nowrap;
+}
+.aria-one-mirror .mirror-rules {
+  white-space: normal;
+  word-break: break-word;
+}
+.aria-one-mirror .mirror-error {
+  margin-top: 4px;
+  max-width: 300px;
+  white-space: normal;
+  word-break: break-word;
+}
+.aria-one-mirror .mirror-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 70px;
+}
+.aria-one-mirror .mirror-progress .progress {
+  flex: 1 1 auto;
+  min-width: 30px;
+  margin: 0;
+}
+.aria-one-mirror .mirror-actions-head,
+.aria-one-mirror .mirror-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.aria-one-mirror .mirror-actions .btn-group {
+  display: inline-flex;
+}
+.aria-one-mirror .mirror-actions .btn-group > .btn {
+  float: none;
+}
+.aria-one-mirror .mirror-btn-text {
+  margin-left: 4px;
+}
+/* 窄屏时操作按钮只显示图标（文字保留给读屏，title 提示） */
+@media (max-width: 1399px) {
+  .aria-one-mirror .mirror-actions .btn-group > .btn {
+    min-width: 26px;
+  }
+  .aria-one-mirror .mirror-actions .mirror-btn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+.aria-one-mirror .table-responsive > .mirror-table > tbody > tr.mirror-detail-row > td {
+  border-top: 0;
+  padding: 0 8px 10px;
+  white-space: normal;
+}
+.aria-one-mirror .mirror-detail {
+  padding: 8px 12px;
+  border-left: 3px solid #3c8dbc;
+  background-color: #f7f9fb;
+  word-break: break-word;
+}
+.aria-one-mirror .mirror-detail.mirror-delete {
+  border-left-color: #dd4b39;
+}
+.aria-one-mirror .mirror-detail .checkbox {
+  margin: 8px 0;
+}
+.aria-one-mirror .mirror-detail .mirror-alert {
+  margin: 8px 0;
+}
+.aria-one-mirror .mirror-detail-head {
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.aria-one-mirror .mirror-version + .mirror-version {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #ddd;
+}
+.aria-one-mirror .mirror-files {
+  margin: 4px 0 0 18px;
+}
+.aria-one-mirror .mirror-files > li {
+  padding: 1px 0;
+  word-break: break-all;
+}
+
+@media (max-width: 767px) {
+  .aria-one-mirror .mirror-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .aria-one-mirror .mirror-toolbar-buttons .btn {
+    flex: 1 1 calc(50% - 6px);
+  }
+}
+
+/* 暗色主题（AriaNg 在 body 上添加 .theme-dark） */
+.theme-dark.skin-aria-ng .aria-one-mirror .box {
+  background-color: #222;
+  box-shadow: none;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .box-default,
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-list-box {
+  border-top-color: #444;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .box-header {
+  color: #eee;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .box-header.with-border {
+  border-bottom-color: #333;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .btn-box-tool {
+  color: #aaa;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .text-muted,
+.theme-dark.skin-aria-ng .aria-one-mirror .help-block {
+  color: #9a9a9a;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-table > thead > tr > th {
+  border-bottom-color: #3a3a3a;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-table > tbody > tr > td,
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-table > tbody + tbody {
+  border-color: #333;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-table > tbody > tr.mirror-row:hover > td {
+  background-color: #2a2a2a;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-detail {
+  background-color: #1a1a1a;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .mirror-version + .mirror-version {
+  border-top-color: #3a3a3a;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror code {
+  color: #f0a0b8;
+  background-color: #2c2c2c;
+}
+.theme-dark.skin-aria-ng .aria-one-mirror .btn-default.active {
+  background-color: #444;
+  border-color: #555;
+}

@@ -39,6 +39,9 @@ type ControllerProxy struct {
 	downloadDir  string
 	reverseProxy *httputil.ReverseProxy
 	httpClient   *http.Client
+
+	// Protect 返回 true 的路径（如 GitHub Release 镜像文件）不随任务删除
+	Protect func(path string) bool
 }
 
 var wsUpgrader = websocket.Upgrader{
@@ -107,6 +110,22 @@ func (p *ControllerProxy) PreQueryFiles(gid string, token string) ([]string, err
 		}
 	}
 	return paths, nil
+}
+
+// filterProtected 过滤掉受保护的路径
+func (p *ControllerProxy) filterProtected(paths []string) []string {
+	if p.Protect == nil || len(paths) == 0 {
+		return paths
+	}
+	kept := make([]string, 0, len(paths))
+	for _, path := range paths {
+		if p.Protect(path) {
+			log.Printf("[cleaner] skip protected mirror file: %s", path)
+			continue
+		}
+		kept = append(kept, path)
+	}
+	return kept
 }
 
 func extractGidAndToken(rawParams json.RawMessage) (string, string) {
@@ -190,6 +209,9 @@ func (p *ControllerProxy) handleWebSocket(w http.ResponseWriter, r *http.Request
 						if gid != "" {
 							go func(g, tok string) {
 								paths, err := p.PreQueryFiles(g, tok)
+								if err == nil {
+									paths = p.filterProtected(paths)
+								}
 								if err == nil && len(paths) > 0 {
 									// 等待 aria2 注销并释放句柄后删除
 									time.Sleep(100 * time.Millisecond)
@@ -248,7 +270,7 @@ func (p *ControllerProxy) handleSingleRemove(w http.ResponseWriter, r *http.Requ
 	if gid != "" {
 		paths, err := p.PreQueryFiles(gid, token)
 		if err == nil {
-			filesToDelete = paths
+			filesToDelete = p.filterProtected(paths)
 		}
 	}
 
