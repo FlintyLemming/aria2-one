@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,19 +21,6 @@ type RPCRequest struct {
 	ID      interface{}     `json:"id"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params"`
-}
-
-type TellStatusResponse struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
-	Result  struct {
-		GID   string `json:"gid"`
-		Dir   string `json:"dir"`
-		Files []struct {
-			Path string `json:"path"`
-		} `json:"files"`
-	} `json:"result"`
-	Error interface{} `json:"error"`
 }
 
 type ControllerProxy struct {
@@ -73,41 +62,52 @@ func NewControllerProxy(upstreamURLStr, downloadDir string) *ControllerProxy {
 	}
 }
 
-// PreQueryFiles 根据 gid 查询任务文件路径
-func (p *ControllerProxy) PreQueryFiles(gid string, token string) ([]string, error) {
-	params := []interface{}{}
-	if token != "" {
-		params = append(params, token)
-	}
-	params = append(params, gid, []string{"gid", "dir", "files"})
+// RemovableFiles 返回移除 gid 任务时可以一并删除的文件路径。
+// 以下文件不删除：
+//   - 失败且未写入任何数据的任务：路径上的文件不是它下载的（可能是另一个同名任务的成果）
+//   - 仍被其他任务（含已完成/失败的记录）引用的路径
+//
+// 查询失败时返回错误，调用方应放弃删除
+func (p *ControllerProxy) RemovableFiles(gid string, token string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	client := NewAria2Client(p.upstreamURL.String(), strings.TrimPrefix(token, "token:"))
 
-	reqMap := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      "tellStatus_internal",
-		"method":  "aria2.tellStatus",
-		"params":  params,
-	}
-	reqBytes, err := json.Marshal(reqMap)
+	task, err := client.TellStatus(ctx, gid)
 	if err != nil {
 		return nil, err
 	}
+	if task.Status == "error" && task.CompletedLength == "0" {
+		log.Printf("[cleaner] gid %s failed without writing data, keep files", gid)
+		return nil, nil
+	}
 
-	resp, err := p.httpClient.Post(p.upstreamURL.String(), "application/json", bytes.NewReader(reqBytes))
+	all, err := client.AllTasks(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	var statusResp TellStatusResponse
-	if err := json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
-		return nil, err
+	shared := map[string]string{}
+	for _, t := range all {
+		if t.GID == gid {
+			continue
+		}
+		for _, f := range t.Files {
+			if f.Path != "" {
+				shared[filepath.Clean(f.Path)] = t.GID
+			}
+		}
 	}
 
 	var paths []string
-	for _, f := range statusResp.Result.Files {
-		if f.Path != "" {
-			paths = append(paths, f.Path)
+	for _, f := range task.Files {
+		if f.Path == "" {
+			continue
 		}
+		if other, ok := shared[filepath.Clean(f.Path)]; ok {
+			log.Printf("[cleaner] skip %s: still used by gid %s", f.Path, other)
+			continue
+		}
+		paths = append(paths, f.Path)
 	}
 	return paths, nil
 }
@@ -208,9 +208,11 @@ func (p *ControllerProxy) handleWebSocket(w http.ResponseWriter, r *http.Request
 						gid, token := extractGidAndToken(req.Params)
 						if gid != "" {
 							go func(g, tok string) {
-								paths, err := p.PreQueryFiles(g, tok)
+								paths, err := p.RemovableFiles(g, tok)
 								if err == nil {
 									paths = p.filterProtected(paths)
+								} else {
+									log.Printf("[cleaner] keep files for gid %s: %v", g, err)
 								}
 								if err == nil && len(paths) > 0 {
 									// 等待 aria2 注销并释放句柄后删除
@@ -268,9 +270,11 @@ func (p *ControllerProxy) handleSingleRemove(w http.ResponseWriter, r *http.Requ
 	gid, token := extractGidAndToken(req.Params)
 	var filesToDelete []string
 	if gid != "" {
-		paths, err := p.PreQueryFiles(gid, token)
+		paths, err := p.RemovableFiles(gid, token)
 		if err == nil {
 			filesToDelete = p.filterProtected(paths)
+		} else {
+			log.Printf("[cleaner] keep files for gid %s: %v", gid, err)
 		}
 	}
 

@@ -67,9 +67,13 @@ func TestWebSocketRemoveInterception(t *testing.T) {
 				}
 			}
 		} else {
-			// 普通 HTTP tellStatus 处理
+			// 普通 HTTP tellStatus 处理，其余任务列表为空
 			var req map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&req)
+			if req["method"] != "aria2.tellStatus" {
+				json.NewEncoder(w).Encode(map[string]interface{}{"jsonrpc": "2.0", "id": req["id"], "result": []interface{}{}})
+				return
+			}
 			resp := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      req["id"],
@@ -171,6 +175,10 @@ func TestWebSocketRemoveSkipsProtectedFiles(t *testing.T) {
 		}
 		var req map[string]interface{}
 		json.NewDecoder(r.Body).Decode(&req)
+		if req["method"] != "aria2.tellStatus" {
+			json.NewEncoder(w).Encode(map[string]interface{}{"jsonrpc": "2.0", "id": req["id"], "result": []interface{}{}})
+			return
+		}
 		w.Write(tellStatus(req["id"]))
 	}))
 	defer upstreamServer.Close()

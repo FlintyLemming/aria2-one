@@ -14,8 +14,27 @@ import (
 
 // 模拟 upstream Aria2 RPC 服务器
 type mockAria2Server struct {
-	mu    sync.Mutex
-	tasks map[string][]string // gid -> files
+	mu     sync.Mutex
+	tasks  map[string][]string // gid -> files
+	failed map[string]bool     // 失败且未写入数据的任务
+}
+
+func (m *mockAria2Server) task(gid string) map[string]interface{} {
+	files := []map[string]interface{}{}
+	for _, f := range m.tasks[gid] {
+		files = append(files, map[string]interface{}{"path": f})
+	}
+	status, completed := "complete", "4"
+	if m.failed[gid] {
+		status, completed = "error", "0"
+	}
+	return map[string]interface{}{
+		"gid":             gid,
+		"status":          status,
+		"completedLength": completed,
+		"dir":             "/downloads",
+		"files":           files,
+	}
 }
 
 func (m *mockAria2Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,20 +58,15 @@ func (m *mockAria2Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "aria2.tellStatus":
 		params := req["params"].([]interface{})
 		gid := params[0].(string)
-		files := []map[string]interface{}{}
-		for _, f := range m.tasks[gid] {
-			files = append(files, map[string]interface{}{"path": f})
+		json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "jsonrpc": "2.0", "result": m.task(gid)})
+	case "aria2.tellActive", "aria2.tellWaiting":
+		json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "jsonrpc": "2.0", "result": []interface{}{}})
+	case "aria2.tellStopped":
+		result := []interface{}{}
+		for gid := range m.tasks {
+			result = append(result, m.task(gid))
 		}
-		resp := map[string]interface{}{
-			"id":      id,
-			"jsonrpc": "2.0",
-			"result": map[string]interface{}{
-				"gid":   gid,
-				"dir":   "/downloads",
-				"files": files,
-			},
-		}
-		json.NewEncoder(w).Encode(resp)
+		json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "jsonrpc": "2.0", "result": result})
 	case "aria2.remove", "aria2.removeDownloadResult":
 		params := req["params"].([]interface{})
 		gid := params[0].(string)
@@ -147,9 +161,6 @@ func TestProxyRemoveSkipsProtectedMirrorFiles(t *testing.T) {
 	mock := &mockAria2Server{
 		tasks: map[string][]string{
 			"gidMirror": {mirrorFile},
-			"gidPlain":  {plainFile},
-			"gidMixed":  {mirrorFile, plainFile},
-			"gidAgain":  {mirrorFile},
 		},
 	}
 	mockServer := httptest.NewServer(mock)
@@ -185,6 +196,7 @@ func TestProxyRemoveSkipsProtectedMirrorFiles(t *testing.T) {
 	}
 
 	// 混合任务：只删除未受保护的文件
+	mock.tasks["gidMixed"] = []string{mirrorFile, plainFile}
 	remove("aria2.remove", "gidMixed")
 	if _, err := os.Stat(mirrorFile); err != nil {
 		t.Errorf("protected mirror file was deleted by mixed task: %v", err)
@@ -195,8 +207,77 @@ func TestProxyRemoveSkipsProtectedMirrorFiles(t *testing.T) {
 
 	// Protect 为 nil 时保持原行为
 	proxy.Protect = nil
+	mock.tasks["gidAgain"] = []string{mirrorFile}
 	remove("aria2.removeDownloadResult", "gidAgain")
 	if _, err := os.Stat(mirrorFile); !os.IsNotExist(err) {
 		t.Errorf("without Protect the file should be deleted, stat err = %v", err)
+	}
+}
+
+// 多个任务下载同一文件：移除失败/重复的任务不能删掉其他任务下载好的文件
+func TestProxyRemoveKeepsFilesSharedWithOtherTasks(t *testing.T) {
+	tmpDir := t.TempDir()
+	iso := filepath.Join(tmpDir, "deepin.iso")
+	if err := os.WriteFile(iso, []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mock := &mockAria2Server{
+		tasks: map[string][]string{
+			"gidFailed1": {iso},
+			"gidFailed2": {iso},
+			"gidDone":    {iso},
+		},
+		failed: map[string]bool{"gidFailed1": true, "gidFailed2": true},
+	}
+	mockServer := httptest.NewServer(mock)
+	defer mockServer.Close()
+	proxy := NewControllerProxy(mockServer.URL, tmpDir)
+
+	remove := func(gid string) {
+		t.Helper()
+		body := `{"jsonrpc":"2.0","method":"aria2.removeDownloadResult","id":"x","params":["` + gid + `"]}`
+		rec := httptest.NewRecorder()
+		proxy.ServeHTTP(rec, httptest.NewRequest("POST", "/jsonrpc", bytes.NewBufferString(body)))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("unexpected response %d: %s", rec.Code, rec.Body.String())
+		}
+	}
+
+	// 失败任务：仍有其他任务引用该路径
+	remove("gidFailed1")
+	if _, err := os.Stat(iso); err != nil {
+		t.Fatalf("file shared with other tasks was deleted: %v", err)
+	}
+
+	// 已完成任务：路径仍被失败任务引用
+	remove("gidDone")
+	if _, err := os.Stat(iso); err != nil {
+		t.Fatalf("file still referenced by gidFailed2 was deleted: %v", err)
+	}
+
+	// 最后一个任务是失败且未写入数据的任务：文件不是它下载的
+	remove("gidFailed2")
+	if _, err := os.Stat(iso); err != nil {
+		t.Fatalf("failed task without data deleted an existing file: %v", err)
+	}
+}
+
+// 唯一引用该文件的已完成任务被移除时，文件照常删除
+func TestProxyRemoveDeletesFilesOfLastTask(t *testing.T) {
+	tmpDir := t.TempDir()
+	iso := filepath.Join(tmpDir, "deepin.iso")
+	if err := os.WriteFile(iso, []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	mock := &mockAria2Server{tasks: map[string][]string{"gidDone": {iso}}}
+	mockServer := httptest.NewServer(mock)
+	defer mockServer.Close()
+	proxy := NewControllerProxy(mockServer.URL, tmpDir)
+
+	body := `{"jsonrpc":"2.0","method":"aria2.removeDownloadResult","id":"x","params":["gidDone"]}`
+	proxy.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/jsonrpc", bytes.NewBufferString(body)))
+	if _, err := os.Stat(iso); !os.IsNotExist(err) {
+		t.Fatalf("expected file to be deleted, stat err = %v", err)
 	}
 }

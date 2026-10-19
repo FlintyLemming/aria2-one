@@ -180,3 +180,23 @@ func (c *Aria2Client) StoppedErrors(ctx context.Context) (map[string]string, err
 	}
 	return result, nil
 }
+
+// TellStatus 查询单个任务的状态、进度与文件
+func (c *Aria2Client) TellStatus(ctx context.Context, gid string) (aria2Task, error) {
+	var t aria2Task
+	err := c.call(ctx, "aria2.tellStatus", []interface{}{gid, aria2StatusKeys}, &t)
+	return t, err
+}
+
+// AllTasks 返回 active + waiting(含 paused) + stopped 全部任务
+func (c *Aria2Client) AllTasks(ctx context.Context) ([]aria2Task, error) {
+	tasks, err := c.ActiveTasks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var stopped []aria2Task
+	if err := c.call(ctx, "aria2.tellStopped", []interface{}{0, 1000, aria2StatusKeys}, &stopped); err != nil {
+		return nil, err
+	}
+	return append(tasks, stopped...), nil
+}
